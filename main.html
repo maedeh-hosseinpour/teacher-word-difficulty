@@ -715,8 +715,8 @@
     } else if (currentIndex === words.length - 1) {
     const reasonText = document.getElementById("difficultyReason").value.trim();
     if (previousRating >= 3 && reasonText.length < MIN_EXPLANATION_LENGTH && responses[currentIndex].clicked_letters.length === 0) {
-      showError(`Please provide at least ${MIN_EXPLANATION_LENGTH} characters of explanation or select at least one letter.`);
-      return;
+        showError(`Please provide at least ${MIN_EXPLANATION_LENGTH} characters of explanation or select at least one letter.`);
+        return;
     }
     responses[currentIndex].reason = reasonText;
     
@@ -747,30 +747,48 @@
   function submitResults() {
     const submitBtn = document.getElementById("submit-btn");
     const buttons = document.querySelectorAll(".rating-button, #next-btn, #submit-btn, #clear, #no-letter-option");
-    buttons.forEach(btn => btn.disabled = true);
-    
+    const textarea = document.getElementById("difficultyReason");
+    const interactiveElements = document.querySelectorAll("button, textarea, a");
+
+    interactiveElements.forEach(el => el.disabled = true);
+    if (textarea) textarea.disabled = true;
+
+    const preventInteraction = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+    document.addEventListener("click", preventInteraction, { capture: true });
+    document.addEventListener("keydown", preventInteraction, { capture: true });
+
     submitBtn.textContent = "Submitting...";
 
     const url = `https://script.google.com/macros/s/AKfycbwKaF9XmDDRKfD2QqKov1kzBhPvf7Nxnd7DkKdKBVJhRJCRlrxSDQzlHuRjTiLcGlr2/exec?participant=${participantId}`;
 
     fetch(url, {
-      method: "POST",
-      body: JSON.stringify(responses)
+        method: "POST",
+        body: JSON.stringify(responses)
     })
     .then(res => res.text())
     .then(() => {
-      submitBtn.textContent = "Submit";
-      showVerificationCode();
+        submitBtn.textContent = "Submit";
+
+      interactiveElements.forEach(el => el.disabled = false);
+        document.removeEventListener("click", preventInteraction, { capture: true });
+        document.removeEventListener("keydown", preventInteraction, { capture: true });
+        showVerificationCode();
     })
     .catch(error => {
-      console.warn("Submission may have failed.");
-      console.error("Error details:", error);
-      submitBtn.textContent = "Submit";
-      buttons.forEach(btn => btn.disabled = false); // Re-enable buttons on error
-      showError("Submission failed. Please try again.");
+        console.warn("Submission may have failed.");
+        console.error("Error details:", error);
+        submitBtn.textContent = "Submit";
+
+      interactiveElements.forEach(el => el.disabled = false);
+        if (textarea) textarea.disabled = false;
+        document.removeEventListener("click", preventInteraction, { capture: true });
+        document.removeEventListener("keydown", preventInteraction, { capture: true });
+        showError("Submission failed. Please try again.");
     });
 }
-
   function showVerificationCode() {
     const submitBtn = document.getElementById("submit-btn");
     const wordBox = document.getElementById("word");
@@ -780,7 +798,7 @@
     const explanationBox = document.getElementById("text-explanation");
 
     wordBox.innerHTML = `<div class="analysis-box">Thank you for participating!</div>`;
-    verificationText.innerHTML = `<br><a href="https://forms.gle/XyFCuZFBTxxdJFsJ8" target="_blank" class="clear-text">Go to Post-Survey</a>`;
+    verificationText.innerHTML = `<br><a href="https://forms.gle/6Tdq1P2QXGgQUzYd7" target="_blank" class="clear-text">Go to Post-Survey</a>`;
     submitBtn.style.display = "none";
     thankYouText.style.display = "none";
     instruction.style.display = "none";
