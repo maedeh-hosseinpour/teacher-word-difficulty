@@ -397,7 +397,7 @@
       return;
     }
 
-    const subsetId = (parseInt(input.slice(-2), 36) % 24) + 1;
+    const subsetId = (parseInt(input.slice(-2), 36) % 23) + 1;
     let subsetWords = allWords.filter(word => word.subset === subsetId);
     
     if (subsetWords.length === 0) {
