@@ -355,12 +355,7 @@
   let previousRating = null;
   const participantUrl = document.referrer || "Direct";
   const MIN_EXPLANATION_LENGTH = 10;
-  let featureCounts = {
-    long_words: 0,
-    digraphs: 0,
-    silent_letters: 0,
-    vowel_digraphs: 0
-  };
+
 
   async function loadWords() {
     try {
@@ -557,14 +552,7 @@
     responses[currentIndex].rating_sequence.push(rating);
     responses[currentIndex].difficulty = responses[currentIndex].rating_sequence.join(',');
     responses[currentIndex].time_seconds = timeTaken;
-    
-    if (rating >= 3) {
-      const wordData = words[currentIndex];
-      featureCounts.long_words += wordData.long_words || 0;
-      featureCounts.digraphs += wordData.digraphs || 0;
-      featureCounts.silent_letters += wordData.silent_letters || 0;
-      featureCounts.vowel_digraphs += wordData.vowel_digraphs || 0;
-    }
+  
     
     previousRating = rating;
 
@@ -705,14 +693,6 @@
     errorContainer.innerHTML = "";
   }
 
-  function getFeatureExplanations(features) {
-    const explanations = {
-      digraphs: "Digraphs are pairs of letters that together make a single sound, such as th, ch, gh, sh, ph, wh.",
-      vowel_digraphs: "Vowel digraphs are two vowels that combine to make one sound, like ea, ou, ei, ie, oe, ai, au, oo, ay, ey.",
-      silent_letters: "Silent letters are letters in a word that are not pronounced, such as the 'k' in 'knight' or the 'w' in 'write'."
-    };
-    return features.map(feature => explanations[feature] || "").filter(Boolean).join("<br>");
-  }
 
   function goToNextWord() {
     if (currentIndex < words.length - 1) {
@@ -733,43 +713,25 @@
       currentIndex++;
       showWord();
     } else if (currentIndex === words.length - 1) {
-      const reasonText = document.getElementById("difficultyReason").value.trim();
-      if (previousRating >= 3 && reasonText.length < MIN_EXPLANATION_LENGTH && responses[currentIndex].clicked_letters.length === 0) {
-        showError(`Please provide at least ${MIN_EXPLANATION_LENGTH} characters of explanation or select at least one letter.`);
-        return;
-      }
-      responses[currentIndex].reason = reasonText;
-      
-      const submitBtn = document.getElementById("submit-btn");
-      const wordBox = document.getElementById("word");
-      const nextBtn = document.getElementById("next-btn");
-      const instruction = document.getElementById("rating-instruction");
-
-      const counts = Object.values(featureCounts);
-      const maxCount = Math.max(...counts);
-      const mostChallengingFeatures = Object.keys(featureCounts).filter(key => featureCounts[key] === maxCount);
-
-      let feedback;
-      if (maxCount > 0) {
-        const featureText = mostChallengingFeatures.length === 1 
-          ? mostChallengingFeatures[0].replace('_', ' ') 
-          : mostChallengingFeatures.map(f => f.replace('_', ' ')).join(', ');
-        feedback = `Based on your answers, ${featureText} ${mostChallengingFeatures.length === 1 ? 'is' : 'are'} the most challenging feature${mostChallengingFeatures.length === 1 ? '' : 's'} for you.`;
-        const explanations = getFeatureExplanations(mostChallengingFeatures);
-        if (explanations) {
-          feedback += `<br><br><b>Explanations:</b><br>${explanations}`;
-        }
-      } else {
-        feedback = "Based on your answers, no specific features stood out as particularly challenging.";
-      }
-
-      wordBox.innerHTML = `<div class="analysis-box">${feedback}</div>`;
-      submitBtn.style.display = "block";
-      nextBtn.style.display = "none";
-      instruction.style.display = "none";
-      document.querySelectorAll(".rating-button").forEach(btn => btn.style.display = "none");
-      document.getElementById("difficulty-question").style.display = "none";
+    const reasonText = document.getElementById("difficultyReason").value.trim();
+    if (previousRating >= 3 && reasonText.length < MIN_EXPLANATION_LENGTH && responses[currentIndex].clicked_letters.length === 0) {
+      showError(`Please provide at least ${MIN_EXPLANATION_LENGTH} characters of explanation or select at least one letter.`);
+      return;
     }
+    responses[currentIndex].reason = reasonText;
+    
+    const submitBtn = document.getElementById("submit-btn");
+    const wordBox = document.getElementById("word");
+    const nextBtn = document.getElementById("next-btn");
+    const instruction = document.getElementById("rating-instruction");
+
+    wordBox.innerHTML = `<div class="analysis-box">Thank you for participating!</div>`;
+    submitBtn.style.display = "block";
+    nextBtn.style.display = "none";
+    instruction.style.display = "none";
+    document.querySelectorAll(".rating-button").forEach(btn => btn.style.display = "none");
+    document.getElementById("difficulty-question").style.display = "none";
+}
   }
 
   function getRatingText(rating) {
@@ -784,7 +746,9 @@
 
   function submitResults() {
     const submitBtn = document.getElementById("submit-btn");
-    submitBtn.disabled = true;
+    const buttons = document.querySelectorAll(".rating-button, #next-btn, #submit-btn, #clear, #no-letter-option");
+    buttons.forEach(btn => btn.disabled = true);
+    
     submitBtn.textContent = "Submitting...";
 
     const url = `https://script.google.com/macros/s/AKfycbwKaF9XmDDRKfD2QqKov1kzBhPvf7Nxnd7DkKdKBVJhRJCRlrxSDQzlHuRjTiLcGlr2/exec?participant=${participantId}`;
@@ -796,17 +760,16 @@
     .then(res => res.text())
     .then(() => {
       submitBtn.textContent = "Submit";
-      submitBtn.disabled = false;
       showVerificationCode();
     })
     .catch(error => {
       console.warn("Submission may have failed.");
       console.error("Error details:", error);
       submitBtn.textContent = "Submit";
-      submitBtn.disabled = false;
+      buttons.forEach(btn => btn.disabled = false); // Re-enable buttons on error
       showError("Submission failed. Please try again.");
     });
-  }
+}
 
   function showVerificationCode() {
     const submitBtn = document.getElementById("submit-btn");
@@ -816,25 +779,7 @@
     const instruction = document.getElementById("rating-instruction");
     const explanationBox = document.getElementById("text-explanation");
 
-    const counts = Object.values(featureCounts);
-    const maxCount = Math.max(...counts);
-    const mostChallengingFeatures = Object.keys(featureCounts).filter(key => featureCounts[key] === maxCount);
-
-    let feedback;
-    if (maxCount > 0) {
-      const featureText = mostChallengingFeatures.length === 1 
-        ? mostChallengingFeatures[0].replace('_', ' ') 
-        : mostChallengingFeatures.map(f => f.replace('_', ' ')).join(', ');
-      feedback = `Based on your answers, ${featureText} ${mostChallengingFeatures.length === 1 ? 'is' : 'are'} the most challenging ${mostChallengingFeatures.length === 1 ? '' : 's'} for you.`;
-      const explanations = getFeatureExplanations(mostChallengingFeatures);
-      if (explanations) {
-        feedback += `<br><br><b>Explanations:</b><br>${explanations}`;
-      }
-    } else {
-      feedback = "Based on your answers, no specific features stood out as particularly challenging.";
-    }
-
-    wordBox.innerHTML = `<div class="analysis-box">${feedback}</div>`;
+    wordBox.innerHTML = `<div class="analysis-box">Thank you for participating!</div>`;
     verificationText.innerHTML = `<br><a href="https://forms.gle/6Tdq1P2QXGgQUzYd7" target="_blank" class="clear-text">Go to Post-Survey</a>`;
     submitBtn.style.display = "none";
     thankYouText.style.display = "none";
@@ -842,7 +787,7 @@
     explanationBox.style.display = "none"; 
     document.getElementById("difficulty-question").style.display = "none";
     document.querySelectorAll(".rating-button").forEach(btn => btn.style.display = "none");
-  }
+}
 
   document.addEventListener('keydown', (event) => {
     const key = event.key;
